@@ -5,14 +5,11 @@ from PIL import Image
 import os
 import io
 
-# ======================
-# CONFIG & CLIENT SETUP
-# ======================
 GEMINI_API_KEY = "YOUR_API_KEY_HERE"
 client = genai.Client(api_key=GEMINI_API_KEY)
 
-st.set_page_config(page_title="Gemini 2.5 Security", layout="centered")
-st.title("🛡️ Gemini 2.5 Biometric Auth")
+st.set_page_config(page_title="Face Recognition", layout="centered")
+st.title(" Face Recognition & Anti-Spoof System")
 
 KNOWN_FACES_DIR = "known_faces"
 
@@ -26,9 +23,6 @@ def prepare_image_for_api(image_path_or_pil):
         image_path_or_pil.save(buf, format='JPEG')
         return types.Part.from_bytes(data=buf.getvalue(), mime_type="image/jpeg")
 
-# ======================
-# DATA LOADING
-# ======================
 def get_security_context():
     """Builds the gallery of authorized users."""
     parts = ["CONTEXT: These images represent authorized users allowed to access the system."]
@@ -43,9 +37,6 @@ def get_security_context():
                         break
     return parts
 
-# ======================
-# UI & EXECUTION
-# ======================
 uploaded_file = st.file_uploader("Scan Face", type=["jpg", "png", "jpeg"])
 
 if uploaded_file:
@@ -53,7 +44,7 @@ if uploaded_file:
     st.image(pil_img, caption="Live Feed", width=400)
     
     if st.button("Secure Login"):
-        with st.spinner("Gemini 2.5 'Thinking'..."):
+        with st.spinner("'Thinking'..."):
             test_part = prepare_image_for_api(pil_img)
             context = get_security_context()
             
@@ -75,7 +66,6 @@ if uploaded_file:
             ]
 
             try:
-                # Using the stable 2.5 Flash model
                 response = client.models.generate_content(
                     model="gemini-2.5-flash", 
                     contents=prompt_parts
@@ -85,13 +75,13 @@ if uploaded_file:
                 st.divider()
                 
                 if "ALLOW:" in res_text:
-                    st.success(f"🔓 {res_text}")
+                    st.success(f" {res_text}")
                 elif "BLOCK: SPOOF" in res_text:
-                    st.error("🚨 SECURITY ALERT: High-confidence spoofing detected (photo-of-a-photo).")
+                    st.error(" SECURITY ALERT: High-confidence spoofing detected (photo-of-a-photo).")
                 elif "BLOCK: NON_HUMAN" in res_text:
-                    st.warning("⚠️ Invalid Subject: Please present a real human face.")
+                    st.warning(" Invalid Subject: Please present a real human face.")
                 else:
-                    st.error(f"❌ Access Denied: {res_text}")
+                    st.error(f" Access Denied: {res_text}")
                     
             except Exception as e:
                 st.error(f"API Error: {e}")
