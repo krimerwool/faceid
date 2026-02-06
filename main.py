@@ -23,7 +23,7 @@ from deepface import DeepFace
 # PAGE CONFIG
 # ======================
 st.set_page_config(page_title="Face Recognition POC", layout="wide")
-st.title("🔍 Face Recognition Demo (DeepFace – Facenet512)")
+st.title(" Face Recognition Demo (DeepFace – Facenet512)")
 
 KNOWN_FACES_DIR = "known_faces"
 
@@ -42,10 +42,10 @@ def load_facenet_model():
 try:
     facenet_model = load_facenet_model()
     deepface_available = True
-    st.success("✅ Facenet512 model loaded locally (offline)")
+    st.success(" Facenet512 model loaded locally (offline)")
 except Exception as e:
     deepface_available = False
-    st.error("❌ Facenet512 could not be loaded locally")
+    st.error(" Facenet512 could not be loaded locally")
     st.error(str(e))
 
 # ======================
@@ -74,47 +74,37 @@ def extract_face_features_fallback(image_bgr, face_rect):
 def load_known_faces():
     known_features = []
     known_names = []
-
     base = Path(KNOWN_FACES_DIR)
+    
     if not base.exists():
         return known_features, known_names
 
     for person_dir in sorted(p for p in base.iterdir() if p.is_dir()):
         name = person_dir.name
-
-        image_file = None
-        for ext in [".jpg", ".jpeg", ".png", ".JPG", ".PNG"]:
-            candidate = person_dir / f"{name}{ext}"
-            if candidate.exists():
-                image_file = candidate
-                break
-
-        if image_file is None:
+        # Find ANY image file inside the folder instead of looking for a specific name
+        image_files = list(person_dir.glob("*.[jJ][pP][gG]")) + list(person_dir.glob("*.[pP][nN][gG]"))
+        
+        if not image_files:
             continue
-
-        img = cv2.imread(str(image_file))
-        if img is None:
-            continue
+            
+        image_file = image_files[0] # Take the first image found
 
         try:
+            img = cv2.imread(str(image_file))
+            if img is None: continue
+
             if deepface_available:
                 emb = DeepFace.represent(
                     img_path=str(image_file),
                     model_name="Facenet512",
-                    model=facenet_model,
+                    #model_wrapper=facenet_model, # Updated argument name
                     enforce_detection=False
                 )
                 if emb:
                     known_features.append(np.array(emb[0]["embedding"], dtype=np.float32))
                     known_names.append(name)
-            else:
-                faces = detect_faces_cascade(img)
-                if len(faces) > 0:
-                    known_features.append(
-                        extract_face_features_fallback(img, faces[0])
-                    )
-                    known_names.append(name)
-        except:
+        except Exception as e:
+            print(f"Error loading {name}: {e}")
             continue
 
     return known_features, known_names
@@ -127,7 +117,7 @@ known_features, known_names = load_known_faces()
 col1, col2, col3 = st.columns([2, 1, 1])
 
 with col1:
-    st.subheader("📊 Database Status")
+    st.subheader(" Database Status")
     if known_names:
         st.success(f"Loaded {len(known_names)} identities")
         st.write(", ".join(sorted(known_names)))
@@ -135,12 +125,12 @@ with col1:
         st.error("No known faces loaded")
 
 with col2:
-    st.subheader("ℹ️ Info")
+    st.subheader("ℹ Info")
     st.write("Model: Facenet512 (offline)")
     st.write("Backend: TensorFlow")
 
 with col3:
-    st.subheader("🔄 Reload")
+    st.subheader(" Reload")
     if st.button("Reload Faces"):
         load_known_faces.clear()
         st.experimental_rerun()
@@ -150,7 +140,7 @@ st.divider()
 # ======================
 # UPLOAD & RECOGNITION
 # ======================
-st.subheader("🖼️ Upload Image")
+st.subheader(" Upload Image")
 uploaded_file = st.file_uploader("Choose image", type=["jpg", "jpeg", "png"])
 
 if uploaded_file:
@@ -165,7 +155,7 @@ if uploaded_file:
         emb = DeepFace.represent(
             img_path=tmp_path,
             model_name="Facenet512",
-            model=facenet_model,
+            #model_wrapper=facenet_model,
             enforce_detection=False
         )
 
@@ -180,13 +170,13 @@ if uploaded_file:
             best_name = known_names[best_idx]
 
             st.divider()
-            st.subheader("🎯 Result")
+            st.subheader(" Result")
 
             if best_dist < 0.6:
                 st.success(f"Match: {best_name}")
                 st.write(f"Distance: {best_dist:.4f}")
             else:
-                st.warning("No confident match")
+                #st.warning("No confident match")
                 st.write(f"Closest: {best_name}")
                 st.write(f"Distance: {best_dist:.4f}")
 
